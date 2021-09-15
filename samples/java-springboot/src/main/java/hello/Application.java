@@ -58,7 +58,20 @@ public class Application {
   }
 
   enum Action {
-    F,L,R,T
+    F(null),
+    L("R"),
+    R("L"),
+    T(null);
+
+    private String opposite;
+
+    Action(String opposite) {
+      this.opposite = opposite;
+    }
+
+    Action getOpposite() {
+      return valueOf(opposite);
+    }
   }
 
   static class Self {
@@ -126,10 +139,10 @@ public class Application {
       this.arenaUpdate = arenaUpdate;
       self = arenaUpdate.arena.state.get(arenaUpdate._links.self.href);
       gatherTargets();
-      forwardPossible = checkIfStepPossible(Action.F);
+      forwardPossible = isPossible(Action.F);
     }
 
-    private boolean checkIfStepPossible(Action action) {
+    private boolean isPossible(Action action) {
       int forwardX = self.getNewX(action);
       if (forwardX < 0 || forwardX >= arenaUpdate.arena.dims.get(0)) {
         return false;
@@ -168,6 +181,13 @@ public class Application {
     }
 
     Action work() {
+      if (self.wasHit) {
+        Action action = random(Action.L, Action.R);
+        if (isPossible(action)) {
+          return action;
+        }
+        return action.getOpposite();
+      }
       if (targets.get(self.direction) != null) {
         return Action.T;
       }
@@ -182,7 +202,7 @@ public class Application {
       if (forwardPossible) {
         return Action.F;
       }
-      if (checkIfStepPossible(Action.R)) {
+      if (isPossible(Action.R)) {
         return Action.R;
       }
       return Action.L;
@@ -206,8 +226,8 @@ public class Application {
       return null;
     }
 
-    private String random(Action...actions) {
-      return actions[new Random().nextInt(actions.length)].name();
+    private Action random(Action...actions) {
+      return actions[new Random().nextInt(actions.length)];
     }
   
     private void selectIfBetter(Map<Direction, PlayerState> targets, PlayerState next,
