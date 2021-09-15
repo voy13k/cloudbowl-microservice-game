@@ -110,6 +110,8 @@ public class Application {
     SpringApplication.run(Application.class, args);
   }
 
+  public boolean panic;
+
   @InitBinder
   public void initBinder(WebDataBinder binder) {
     binder.initDirectFieldAccess();
@@ -182,8 +184,15 @@ public class Application {
 
     Action work() {
       if (self.wasHit) {
+        if (panic) {
+          panic = false;
+          if (isPossible(Action.F)) {
+            return Action.F;
+          }
+        }
         Action action = random(Action.L, Action.R);
         if (isPossible(action)) {
+          panic = true;
           return action;
         }
         return action.getOpposite();
