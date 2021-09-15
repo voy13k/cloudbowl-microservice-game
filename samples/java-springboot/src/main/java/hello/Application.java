@@ -75,16 +75,16 @@ public class Application {
     Predicate<PlayerState> checkTarget;
     switch (_d) {
     case "N":
-      checkTarget = (ps) -> ps.x == _x && ps.y < _y && _y - ps.y < 3;
+      checkTarget = (ps) -> ps.x == _x && ps.y < _y && _y - ps.y < 4;
       break;
     case "S":
-      checkTarget = (ps) -> ps.x == _x && ps.y > _y && ps.y - _y < 3;
+      checkTarget = (ps) -> ps.x == _x && ps.y > _y && ps.y - _y < 4;
       break;
     case "E":
-      checkTarget = (ps) -> ps.y == _y && ps.x > _x && ps.x - _x < 3;
+      checkTarget = (ps) -> ps.y == _y && ps.x > _x && ps.x - _x < 4;
       break;
     default:
-      checkTarget = (ps) -> ps.y == _y && ps.x < _x && _x - ps.x < 3;
+      checkTarget = (ps) -> ps.y == _y && ps.x < _x && _x - ps.x < 4;
       break;
     }
     for(PlayerState target: arenaUpdate.arena.state.values()) {
