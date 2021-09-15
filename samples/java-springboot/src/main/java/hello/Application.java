@@ -183,16 +183,16 @@ public class Application {
     }
 
     Action work() {
-      if (self.wasHit) {
-        if (panic) {
-          panic = false;
-          if (isPossible(Action.F)) {
-            return Action.F;
-          }
+      if (panic) {
+        panic = false;
+        if (isPossible(Action.F)) {
+          return Action.F;
         }
+      }
+      if (self.wasHit) {
+        panic = true;
         Action action = random(Action.L, Action.R);
         if (isPossible(action)) {
-          panic = true;
           return action;
         }
         return action.getOpposite();
