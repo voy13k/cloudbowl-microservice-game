@@ -56,7 +56,8 @@ public class Application {
 
   @PostMapping("/**")
   public String index(@RequestBody ArenaUpdate arenaUpdate) {
-    if (worthShooting(arenaUpdate)) {
+    if (!arenaUpdate.arena.state.get(arenaUpdate._links.self.href).wasHit &&
+      worthShooting(arenaUpdate)) {
       return "T";
     }
     String[] commands = new String[] {
