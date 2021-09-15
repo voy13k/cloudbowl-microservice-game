@@ -9,13 +9,52 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.function.Predicate;
 
 @SpringBootApplication
 @RestController
 public class Application {
   enum Direction {
-    N,S,E,W
+    N("W", "E", "S", 0, -1),
+    S("E", "W", "N", 0, 1),
+    E("N", "S", "W", 1, 0),
+    W("S", "N", "E", -1, 0);
+
+    public final int yStep;
+    public final int xStep;
+    private String left;
+    private String right;
+    private String opposite;
+
+    Direction(String left, String right, String opposite, int xStep, int yStep) {
+      this.left = left;
+      this.right = right;
+      this.opposite = opposite;
+      this.xStep = xStep;
+      this.yStep = yStep;
+    }
+
+    Direction getLeft() {
+      return valueOf(left);
+    }
+
+    Direction getRight() {
+      return valueOf(right);
+    }
+
+    Direction getOpposite() {
+      return valueOf(opposite);
+    }
+
+    Direction getNewDirection(Action action) {
+      switch(action) {
+        case L:
+          return getLeft();
+        case R:
+          return getRight();
+        default:
+          return this;
+      }
+    }
   }
 
   enum Action {
@@ -36,6 +75,12 @@ public class Application {
     public Direction direction;
     public Boolean wasHit;
     public Integer score;
+    int getNewX(Action turn) {
+      return x + direction.getNewDirection(turn).xStep;
+    }
+    int getNewY(Action turn) {
+      return y + direction.getNewDirection(turn).yStep;
+    }
   }
 
   static class Arena {
@@ -64,43 +109,114 @@ public class Application {
 
   @PostMapping("/**")
   public String index(@RequestBody ArenaUpdate arenaUpdate) {
-    if (arenaUpdate.arena.state.get(arenaUpdate._links.self.href).wasHit) {
-      return escape(arenaUpdate);
-    }
-    if (worthShooting(arenaUpdate)) {
-      return "T";
-    }
-    return random(Action.F, Action.R, Action.L);
+    return new Worker(arenaUpdate).work().name();
   }
 
-  private String escape(ArenaUpdate arenaUpdate) {
-    return random(Action.F, Action.L, Action.R);
+  interface PlayerPairFunctor<R> {
+    R check(PlayerState p1, PlayerState p2);
   }
 
-  private boolean worthShooting(ArenaUpdate arenaUpdate) {
-    PlayerState self = arenaUpdate.arena.state.get(arenaUpdate._links.self.href);
-    PlayerPositionFunctor f = TARGETTING.get(self.direction);
-    for(PlayerState target: arenaUpdate.arena.state.values()) {
-      if (f.check(target, self)) {
-        return true;
+  class Worker {
+    ArenaUpdate arenaUpdate;
+    Map<Direction, PlayerState> targets = new EnumMap<>(Direction.class);
+    PlayerState self;
+    boolean forwardPossible;
+
+    Worker(ArenaUpdate arenaUpdate) {
+      this.arenaUpdate = arenaUpdate;
+      self = arenaUpdate.arena.state.get(arenaUpdate._links.self.href);
+      gatherTargets();
+      forwardPossible = checkIfStepPossible(Action.F);
+    }
+
+    private boolean checkIfStepPossible(Action action) {
+      int forwardX = self.getNewX(action);
+      if (forwardX < 0 || forwardX >= arenaUpdate.arena.dims.get(0)) {
+        return false;
+      }
+      int forwardY = self.getNewY(action);
+      if (forwardY < 0 || forwardY >= arenaUpdate.arena.dims.get(1)) {
+        return false;
+      }
+      PlayerState frontTarget = targets.get(self.direction);
+      return frontTarget == null
+        || (forwardX != frontTarget.x && forwardY != frontTarget.y);
+    }
+
+    private void gatherTargets() {
+      for (PlayerState next : arenaUpdate.arena.state.values()) {
+        if (next.x == self.x) {
+          // same column
+          if (next.y > self.y && next.y - self.y < 4) {
+            // below
+            selectIfBetter(targets, next, Direction.S, (p, n) -> p.y > n.y);
+          } else if (next.y < self.y  && self.y - next.y < 4) {
+            // above
+            selectIfBetter(targets, next, Direction.N, (p, n) -> p.y < n.y);
+          }
+        } else if (next.y == self.y) {
+          // same row
+          if (next.x < self.x && self.x - next.x < 4) {
+            // left
+            selectIfBetter(targets, next, Direction.W, (p, n) -> p.x < n.x);
+          } else if (next.x > self.x && next.x - self.x < 4) {
+            // right
+            selectIfBetter(targets, next, Direction.E, (p, n) -> p.x > n.x);
+          }
+        }
       }
     }
-    return false;
-  }
 
-  private String random(Action...actions) {
-    return actions[new Random().nextInt(actions.length)].name();
-  }
+    Action work() {
+      if (targets.get(self.direction) != null) {
+        return Action.T;
+      }
+      Action action = handleNeighbour(Action.L);
+      if (action != null) {
+        return action;
+      }
+      action = handleNeighbour(Action.R);
+      if (action != null) {
+        return action;
+      }
+      if (forwardPossible) {
+        return Action.F;
+      }
+      if (checkIfStepPossible(Action.R)) {
+        return Action.R;
+      }
+      return Action.L;
+    }
 
-  Map<Direction, PlayerPositionFunctor> TARGETTING = new EnumMap<>(Direction.class);
-  {
-    TARGETTING.put(Direction.N, (o, s) -> o.x == s.x && o.y < s.y && s.y - o.y < 4);
-    TARGETTING.put(Direction.S, (o, s) -> o.x == s.x && o.y > s.y && o.y - s.y < 4);
-    TARGETTING.put(Direction.E, (o, s) -> o.y == s.y && o.x > s.x && o.x - s.x < 4);
-    TARGETTING.put(Direction.W, (o, s) -> o.y == s.y && o.x < s.x && s.x - o.x < 4);
-  }
+    private Action handleNeighbour(Action turn) {
+      Direction newDirection = self.direction.getNewDirection(turn);
+      PlayerState target = targets.get(newDirection);
+      if (target != null) {
+        // someone there
+        if (target.direction == newDirection.getOpposite()) {
+          // aiming at us - run away
+          if (forwardPossible) {
+            return Action.F;
+          }
+          // can't runaway - lets face them for a shootout
+        }
+        return turn;
+      }
+      // no target on this side
+      return null;
+    }
 
-  interface PlayerPositionFunctor {
-    boolean check(PlayerState other, PlayerState self);
+    private String random(Action...actions) {
+      return actions[new Random().nextInt(actions.length)].name();
+    }
+  
+    private void selectIfBetter(Map<Direction, PlayerState> targets, PlayerState next,
+      Direction direction, PlayerPairFunctor<Boolean> criteria) {
+      PlayerState previous = targets.get(direction);
+      if (previous == null || criteria.check(previous, next)) {
+        targets.put(direction, next);
+      }
+    }
+  
   }
 }
