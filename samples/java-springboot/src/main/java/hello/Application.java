@@ -6,9 +6,12 @@ import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+import java.util.function.Function;
 
 @SpringBootApplication
 @RestController
@@ -19,38 +22,37 @@ public class Application {
     E("N", "S", "W", 1, 0),
     W("S", "N", "E", -1, 0);
 
+    static {
+      for (Direction direction: values()) {
+        direction.left = valueOf(direction.leftStr);
+        direction.right = valueOf(direction.rightStr);
+        direction.left = valueOf(direction.oppositeStr);
+      }
+    }
+
+    public Direction left;
+    public Direction right;
+    public Direction opposite;
     public final int yStep;
     public final int xStep;
-    private String left;
-    private String right;
-    private String opposite;
+    private String leftStr;
+    private String rightStr;
+    private String oppositeStr;
 
     Direction(String left, String right, String opposite, int xStep, int yStep) {
-      this.left = left;
-      this.right = right;
-      this.opposite = opposite;
+      this.leftStr = left;
+      this.rightStr = right;
+      this.oppositeStr = opposite;
       this.xStep = xStep;
       this.yStep = yStep;
-    }
-
-    Direction getLeft() {
-      return valueOf(left);
-    }
-
-    Direction getRight() {
-      return valueOf(right);
-    }
-
-    Direction getOpposite() {
-      return valueOf(opposite);
     }
 
     Direction getNewDirection(Action action) {
       switch(action) {
         case L:
-          return getLeft();
+          return left;
         case R:
-          return getRight();
+          return right;
         default:
           return this;
       }
@@ -74,6 +76,10 @@ public class Application {
     }
   }
 
+  Map<Direction, PlayerState> targets = new EnumMap<>(Direction.class);
+  Map<Direction, PlayerState> shooters = new EnumMap<>(Direction.class);
+  Set<Direction> space = EnumSet.noneOf(Direction.class);
+
   static class Self {
     public String href;
   }
@@ -88,12 +94,6 @@ public class Application {
     public Direction direction;
     public Boolean wasHit;
     public Integer score;
-    int getNewX(Action turn) {
-      return x + direction.getNewDirection(turn).xStep;
-    }
-    int getNewY(Action turn) {
-      return y + direction.getNewDirection(turn).yStep;
-    }
   }
 
   static class Arena {
@@ -109,8 +109,6 @@ public class Application {
   public static void main(String[] args) {
     SpringApplication.run(Application.class, args);
   }
-
-  public boolean panic;
 
   @InitBinder
   public void initBinder(WebDataBinder binder) {
@@ -133,64 +131,86 @@ public class Application {
 
   class Worker {
     ArenaUpdate arenaUpdate;
-    Map<Direction, PlayerState> targets = new EnumMap<>(Direction.class);
     PlayerState self;
-    boolean forwardPossible;
 
     Worker(ArenaUpdate arenaUpdate) {
       this.arenaUpdate = arenaUpdate;
       self = arenaUpdate.arena.state.get(arenaUpdate._links.self.href);
-      gatherTargets();
-      forwardPossible = isPossible(Action.F);
+      analyse();
     }
 
-    private boolean isPossible(Action action) {
-      int forwardX = self.getNewX(action);
-      if (forwardX < 0 || forwardX >= arenaUpdate.arena.dims.get(0)) {
-        return false;
-      }
-      int forwardY = self.getNewY(action);
-      if (forwardY < 0 || forwardY >= arenaUpdate.arena.dims.get(1)) {
-        return false;
-      }
-      PlayerState frontTarget = targets.get(self.direction);
-      return frontTarget == null
-        || (forwardX != frontTarget.x && forwardY != frontTarget.y);
+    private void analyse() {
+      targets.clear();
+      shooters.clear();
+      space.clear();
+      analyseOponents();
+      analyseSpace();
     }
 
-    private void gatherTargets() {
-      for (PlayerState next : arenaUpdate.arena.state.values()) {
-        if (next.x == self.x) {
+    private void analyseOponents() {
+      for (PlayerState opponent : arenaUpdate.arena.state.values()) {
+        if (opponent.x == self.x) {
           // same column
-          if (next.y > self.y && next.y - self.y < 4) {
+          if (opponent.y > self.y && opponent.y - self.y < 4) {
             // below
-            selectIfBetter(targets, next, Direction.S, (p, n) -> p.y > n.y);
-          } else if (next.y < self.y  && self.y - next.y < 4) {
+            analyseOponent(opponent, Direction.S, (prev) -> prev.y > opponent.y);
+          } else if (opponent.y < self.y  && self.y - opponent.y < 4) {
             // above
-            selectIfBetter(targets, next, Direction.N, (p, n) -> p.y < n.y);
+            analyseOponent(opponent, Direction.N, (prev) -> prev.y < opponent.y);
           }
-        } else if (next.y == self.y) {
+        } else if (opponent.y == self.y) {
           // same row
-          if (next.x < self.x && self.x - next.x < 4) {
+          if (opponent.x < self.x && self.x - opponent.x < 4) {
             // left
-            selectIfBetter(targets, next, Direction.W, (p, n) -> p.x < n.x);
-          } else if (next.x > self.x && next.x - self.x < 4) {
+            analyseOponent(opponent, Direction.W, (prev) -> prev.x < opponent.x);
+          } else if (opponent.x > self.x && opponent.x - self.x < 4) {
             // right
-            selectIfBetter(targets, next, Direction.E, (p, n) -> p.x > n.x);
+            analyseOponent(opponent, Direction.E, (prev) -> prev.x > opponent.x);
           }
         }
       }
+    }
+
+    private void analyseOponent(PlayerState next, Direction direction, Function<PlayerState, Boolean> criteria) {
+      PlayerState previous = targets.get(direction);
+      if (previous == null || criteria.apply(previous)) {
+        targets.put(direction, next);
+        if (next.direction == direction.opposite) {
+          shooters.put(direction, next);
+        } else {
+          shooters.remove(direction);
+        }
+      }
+    }
+
+    private void analyseSpace() {
+      // assumes oponents analysed
+      if (self.y > 0 && self.y - targets.get(Direction.S).y > 1) {
+        space.add(Direction.N);
+      }
+      if (self.y + 1 < arenaUpdate.arena.dims.get(1) && targets.get(Direction.N).y - self.y > 1) {
+        space.add(Direction.S);
+      }
+      if (self.x > 0 && targets.get(Direction.E).x - self.x > 1) {
+        space.add(Direction.W);
+      }
+      if (self.x + 1 < arenaUpdate.arena.dims.get(0) && self.x - targets.get(Direction.W).x > 1) {
+        space.add(Direction.E);
+      }
+    }
+  
+    private boolean isPossible(Action action) {
+      Direction newDirection = self.direction.getNewDirection(action);
+      return space.contains(newDirection) &&
+          shooters.get(newDirection) == null &&
+          shooters.get(newDirection.opposite) == null;
     }
 
     Action work() {
-      if (panic) {
-        panic = false;
+      if (self.wasHit) {
         if (isPossible(Action.F)) {
           return Action.F;
         }
-      }
-      if (self.wasHit) {
-        panic = true;
         Action action = random(Action.L, Action.R);
         if (isPossible(action)) {
           return action;
@@ -208,9 +228,6 @@ public class Application {
       if (action != null) {
         return action;
       }
-      if (forwardPossible) {
-        return Action.F;
-      }
       if (isPossible(Action.R)) {
         return Action.R;
       }
@@ -222,13 +239,13 @@ public class Application {
       PlayerState target = targets.get(newDirection);
       if (target != null) {
         // someone there
-        if (target.direction == newDirection.getOpposite()) {
+        if (shooters.get(newDirection) != null) {
           // aiming at us - run away
-          if (forwardPossible) {
+          if (space.contains(self.direction)) {
             return Action.F;
-          }
-          // can't runaway - lets face them for a shootout
-        }
+          } // can't runaway
+        } // not a shooter
+        // shootout
         return turn;
       }
       // no target on this side
@@ -237,14 +254,6 @@ public class Application {
 
     private Action random(Action...actions) {
       return actions[new Random().nextInt(actions.length)];
-    }
-  
-    private void selectIfBetter(Map<Direction, PlayerState> targets, PlayerState next,
-      Direction direction, PlayerPairFunctor<Boolean> criteria) {
-      PlayerState previous = targets.get(direction);
-      if (previous == null || criteria.check(previous, next)) {
-        targets.put(direction, next);
-      }
     }
   
   }
