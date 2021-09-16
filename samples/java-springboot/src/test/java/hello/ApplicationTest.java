@@ -3,6 +3,9 @@ package hello;
 import java.util.Arrays;
 import java.util.HashMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import hello.Application.Arena;
 import hello.Application.ArenaUpdate;
 import hello.Application.Direction;
@@ -13,6 +16,7 @@ import junit.framework.TestCase;
 
 public class ApplicationTest extends TestCase {
 
+    Logger logger = LoggerFactory.getLogger(getClass());
     Application application = new Application();
     ArenaUpdate arenaUpdate = new ArenaUpdate();
     
@@ -22,25 +26,37 @@ public class ApplicationTest extends TestCase {
     }
     
     public void testForward() {
-        System.out.println("*** testForward()");
+        logger.info("*** testForward()");
         addPlayer("p1", playerState(5, 6, Direction.N));
         addPlayer("self_id", playerState(6, 5, Direction.E, false));
         assertEquals("F", application.index(arenaUpdate));
     }
 
     public void testTopBoundary() {
-        System.out.println("*** testTopBoundary()");
+        logger.info("*** testTopBoundary()");
         addPlayer("p1", playerState(5, 6, Direction.N));
         addPlayer("self_id", playerState(6, 0, Direction.N, false));
         assertTrue(Arrays.asList("L", "R").contains(application.index(arenaUpdate)));
     }
 
-    public void testTopBoundaryManyBelow() {
-        System.out.println("*** testTopBoundary()");
-        addPlayer("self_id", playerState(6, 0, Direction.N, false));
-        addPlayer("p1", playerState(6, 3, Direction.N));
-        addPlayer("p2", playerState(6, 4, Direction.E));
-        addPlayer("p3", playerState(6, 5, Direction.W));
+    public void testBottomBoundary() {
+        logger.info("*** testBottomBoundary()");
+        addPlayer("p1", playerState(5, 6, Direction.N));
+        addPlayer("self_id", playerState(6, 5, Direction.S, false));
+        assertTrue(Arrays.asList("L", "R").contains(application.index(arenaUpdate)));
+    }
+
+    public void testLeftBoundary() {
+        logger.info("*** testLeftBoundary()");
+        addPlayer("p1", playerState(5, 6, Direction.N));
+        addPlayer("self_id", playerState(0, 5, Direction.W, false));
+        assertTrue(Arrays.asList("L", "R").contains(application.index(arenaUpdate)));
+    }
+
+    public void testRightBoundary() {
+        logger.info("*** testRightBoundary()");
+        addPlayer("p1", playerState(5, 6, Direction.N));
+        addPlayer("self_id", playerState(7, 5, Direction.E, false));
         assertTrue(Arrays.asList("L", "R").contains(application.index(arenaUpdate)));
     }
 

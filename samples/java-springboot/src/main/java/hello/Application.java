@@ -1,7 +1,10 @@
 package hello;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.core.style.ToStringCreator;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,6 +32,14 @@ public class Application {
     private String leftStr;
     private String rightStr;
     private String oppositeStr;
+
+    static {
+      for (Direction direction: Direction.values()) {
+        direction.left = Direction.valueOf(direction.leftStr);
+        direction.right = Direction.valueOf(direction.rightStr);
+        direction.opposite = Direction.valueOf(direction.oppositeStr);
+      }
+    }
 
     Direction(String left, String right, String opposite) {
       this.leftStr = left;
@@ -95,13 +106,7 @@ public class Application {
     public Arena arena;
   }
 
-  static {
-    for (Direction direction: Direction.values()) {
-      direction.left = Direction.valueOf(direction.leftStr);
-      direction.right = Direction.valueOf(direction.rightStr);
-      direction.opposite = Direction.valueOf(direction.oppositeStr);
-    }
-  }
+  static private final Logger LOGGER = LoggerFactory.getLogger(Application.class);
 
   public static void main(String[] args) {
     SpringApplication.run(Application.class, args);
@@ -120,136 +125,158 @@ public class Application {
   @PostMapping("/**")
   public String index(@RequestBody ArenaUpdate arenaUpdate) {
     Action action = new Worker(arenaUpdate).work();
-    System.out.println("return "+ action);
+    LOGGER.debug("action: {}", action);
     return action.name();
   }
 
-  class Worker {
-    ArenaUpdate arenaUpdate;
-    PlayerState self;
+  class LocationData {
     Map<Direction, PlayerState> targets = new EnumMap<>(Direction.class);
     Map<Direction, PlayerState> shooters = new EnumMap<>(Direction.class);
     Set<Direction> space = EnumSet.noneOf(Direction.class);
-  
-    Worker(ArenaUpdate arenaUpdate) {
-      this.arenaUpdate = arenaUpdate;
-      self = arenaUpdate.arena.state.get(arenaUpdate._links.self.href);
-      analyse();
-    }
 
-    private void analyse() {
+    private int x, y;
+    private ArenaUpdate arenaUpdate;
+
+    LocationData(ArenaUpdate arenaUpdate, int x, int y) {
+      this.arenaUpdate = arenaUpdate;
+      this.x = x;
+      this.y = y;
       analyseOponents();
       analyseSpace();
-      System.out.println("targets:" + targets);
-      System.out.println("shooters:" + shooters);
-      System.out.println("space:" + space);
     }
 
     private void analyseOponents() {
-      for (PlayerState opponent : arenaUpdate.arena.state.values()) {
-        if (opponent.x == self.x) {
+      for (PlayerState nextOponent : arenaUpdate.arena.state.values()) {
+        if (nextOponent.x == x) {
           // same column
-          if (opponent.y > self.y && opponent.y - self.y < 4) {
+          if (nextOponent.y > y && nextOponent.y - y < 4) {
             // below
-            analyseOponent(opponent, Direction.S, (prev) -> prev.y > opponent.y);
-          } else if (opponent.y < self.y  && self.y - opponent.y < 4) {
+            analyseOponent(nextOponent, Direction.S, (prev) -> prev.y > nextOponent.y);
+          } else if (nextOponent.y < y  && y - nextOponent.y < 4) {
             // above
-            analyseOponent(opponent, Direction.N, (prev) -> prev.y < opponent.y);
+            analyseOponent(nextOponent, Direction.N, (prev) -> prev.y < nextOponent.y);
           }
-        } else if (opponent.y == self.y) {
+        } else if (nextOponent.y == y) {
           // same row
-          if (opponent.x < self.x && self.x - opponent.x < 4) {
+          if (nextOponent.x < x && x - nextOponent.x < 4) {
             // left
-            analyseOponent(opponent, Direction.W, (prev) -> prev.x < opponent.x);
-          } else if (opponent.x > self.x && opponent.x - self.x < 4) {
+            analyseOponent(nextOponent, Direction.W, (prev) -> prev.x < nextOponent.x);
+          } else if (nextOponent.x > x && nextOponent.x - x < 4) {
             // right
-            analyseOponent(opponent, Direction.E, (prev) -> prev.x > opponent.x);
+            analyseOponent(nextOponent, Direction.E, (prev) -> prev.x > nextOponent.x);
           }
         }
       }
     }
 
-    private void analyseOponent(PlayerState next, Direction direction, Function<PlayerState, Boolean> criteria) {
-      PlayerState previous = targets.get(direction);
+    private void analyseOponent(PlayerState next, Direction directionToOpponent, Function<PlayerState, Boolean> criteria) {
+      PlayerState previous = targets.get(directionToOpponent);
       if (previous == null || criteria.apply(previous)) {
-        targets.put(direction, next);
-        if (next.direction == direction.opposite) {
-          shooters.put(direction, next);
+        targets.put(directionToOpponent, next);
+        if (next.direction == directionToOpponent.opposite) {
+          shooters.put(directionToOpponent, next);
         } else {
-          shooters.remove(direction);
+          shooters.remove(directionToOpponent);
         }
       }
     }
 
     private void analyseSpace() {
       // assumes oponents analysed
-      checkSpace(Direction.N, self.y == 0, (t) -> self.y - t.y);
-      checkSpace(Direction.S, self.y + 1 >= arenaUpdate.arena.dims.get(1), (t) -> t.y - self.y);
-      checkSpace(Direction.W, self.x == 0, (t) -> t.x - self.x);
-      checkSpace(Direction.E, self.x + 1 >= arenaUpdate.arena.dims.get(0), (t) -> self.x - t.x);
+      checkSpace(Direction.N, y == 0, (t) -> y - t.y);
+      checkSpace(Direction.S, y + 1 >= arenaUpdate.arena.dims.get(1), (t) -> t.y - y);
+      checkSpace(Direction.W, x == 0, (t) -> t.x - x);
+      checkSpace(Direction.E, x + 1 >= arenaUpdate.arena.dims.get(0), (t) -> x - t.x);
     }
 
-    private void checkSpace(Direction direction, boolean onBoundary, Function<PlayerState, Integer> targetDistanceCalc) {
-      PlayerState target = targets.get(direction);
+    private void checkSpace(Direction directionToSpace, boolean onBoundary, Function<PlayerState, Integer> targetDistanceCalc) {
+      PlayerState target = targets.get(directionToSpace);
       Integer distance = target == null ? null : targetDistanceCalc.apply(target);
-      System.out.printf("checkSpace: %s, %s, %s, %s\n", direction, onBoundary, target, distance);
+      LOGGER.debug("checkSpace: {}, {}, {}, {}", directionToSpace, onBoundary, target, distance);
       if (!onBoundary && (target == null || distance > 1)) {
-        space.add(direction);
+        space.add(directionToSpace);
       }
     }
-  
-    private boolean isPossible(Action action) {
-      Direction newDirection = self.direction.getNewDirection(action);
-      return space.contains(newDirection) &&
-          shooters.get(newDirection) == null &&
+    @Override
+    public String toString() {
+      return new ToStringCreator(this)
+        .append("x", x)
+        .append("y", y)
+        .append("targets", targets)
+        .append("shooters", shooters)
+        .append("space", space).toString();
+    }
+
+    boolean isSafe(Direction currentDirection, Action action) {
+      Direction newDirection = currentDirection.getNewDirection(action);
+      return shooters.get(newDirection) == null &&
           shooters.get(newDirection.opposite) == null;
+    }
+
+    private boolean isPossible(Direction currentDirection, Action action) {
+      Direction newDirection = currentDirection.getNewDirection(action);
+      return space.contains(newDirection);
+    }
+
+  }
+
+  class Worker {
+    LocationData locationData;
+    ArenaUpdate arenaUpdate;
+    PlayerState self;
+
+    Worker(ArenaUpdate arenaUpdate) {
+      this.arenaUpdate = arenaUpdate;
+      this.self = arenaUpdate.arena.state.get(arenaUpdate._links.self.href);
+      this.locationData = new LocationData(arenaUpdate, self.x, self.y);
+      LOGGER.debug("{}", locationData);
     }
 
     Action work() {
       if (self.wasHit) {
-        if (isPossible(Action.F)) {
+        if (locationData.space.contains(self.direction)) {
           return Action.F;
         }
         Action action = random(Action.L, Action.R);
-        if (isPossible(action)) {
+        if (locationData.isPossible(self.direction, action)) {
           return action;
         }
         return action.getOpposite();
       }
-      if (targets.get(self.direction) != null) {
+      if (locationData.targets.get(self.direction) != null) {
         return Action.T;
       }
       Action action = random(Action.L, Action.R);
-      action = handleNeighbour(Action.L);
+      action = findTarget(Action.L);
       if (action != null) {
         return action;
       }
-      action = handleNeighbour(Action.R);
+      action = findTarget(Action.R);
       if (action != null) {
         return action;
       }
-      if (isPossible(Action.F)) {
+      if (locationData.space.contains(self.direction)) {
         return Action.F;
       }
       action = random(Action.L, Action.R);
-      if (isPossible(action)) {
+      if (locationData.isPossible(self.direction, action)) {
         return action;
       }
       action = action.getOpposite();
-      if (isPossible(action)) {
+      if (locationData.isPossible(self.direction, action)) {
         return action;
       }
       return Action.T;
     }
 
-    private Action handleNeighbour(Action turn) {
+    private Action findTarget(Action turn) {
       Direction newDirection = self.direction.getNewDirection(turn);
-      PlayerState target = targets.get(newDirection);
+      PlayerState target = locationData.targets.get(newDirection);
       if (target != null) {
         // someone there
-        if (shooters.get(newDirection) != null) {
+        if (locationData.shooters.get(newDirection) != null) {
           // aiming at us - run away
-          if (space.contains(self.direction)) {
+          if (locationData.space.contains(self.direction)) {
             return Action.F;
           } // can't runaway
         } // not a shooter
