@@ -2,7 +2,6 @@ package hello;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.core.style.ToStringCreator;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 
@@ -124,11 +123,9 @@ public class Application {
 
   @PostMapping("/**")
   public String index(@RequestBody ArenaUpdate arenaUpdate) {
-    return new Worker(arenaUpdate).work().name();
-  }
-
-  interface PlayerPairFunctor<R> {
-    R check(PlayerState p1, PlayerState p2);
+    Action action = new Worker(arenaUpdate).work();
+    System.out.println("return "+ action);
+    return action.name();
   }
 
   class Worker {
@@ -198,8 +195,10 @@ public class Application {
 
     private void checkSpace(Direction direction, boolean onBoundary, Function<PlayerState, Integer> targetDistanceCalc) {
       PlayerState target = targets.get(direction);
-      if (!onBoundary && (target == null || targetDistanceCalc.apply(target) > 1)) {
-        space.add(direction.opposite);
+      Integer distance = target == null ? null : targetDistanceCalc.apply(target);
+      System.out.printf("checkSpace: %s, %s, %s, %s\n", direction, onBoundary, target, distance);
+      if (!onBoundary && (target == null || distance > 1)) {
+        space.add(direction);
       }
     }
   

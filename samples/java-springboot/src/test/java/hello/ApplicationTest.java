@@ -18,7 +18,7 @@ public class ApplicationTest extends TestCase {
     
     @Override
     protected void setUp() throws Exception {
-        setUpArena("self_id", 20, 10);
+        setUpArena("self_id", 8, 6);
     }
     
     public void testForward() {
@@ -26,6 +26,13 @@ public class ApplicationTest extends TestCase {
         addPlayer("p1", playerState(5, 6, Direction.N));
         addPlayer("self_id", playerState(6, 5, Direction.E, false));
         assertEquals("F", application.index(arenaUpdate));
+    }
+
+    public void testTopBoundary() {
+        System.out.println("*** testTopBoundary()");
+        addPlayer("p1", playerState(5, 6, Direction.N));
+        addPlayer("self_id", playerState(6, 0, Direction.N, false));
+        assertTrue(Arrays.asList("L", "R").contains(application.index(arenaUpdate)));
     }
 
     private PlayerState playerState(int x, int y, Direction direction, boolean... wasHit) {
