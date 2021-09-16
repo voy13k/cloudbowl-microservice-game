@@ -65,10 +65,6 @@ public class Application {
     }
   }
 
-  Map<Direction, PlayerState> targets = new EnumMap<>(Direction.class);
-  Map<Direction, PlayerState> shooters = new EnumMap<>(Direction.class);
-  Set<Direction> space = EnumSet.noneOf(Direction.class);
-
   static class Self {
     public String href;
   }
@@ -131,7 +127,10 @@ public class Application {
   class Worker {
     ArenaUpdate arenaUpdate;
     PlayerState self;
-
+    Map<Direction, PlayerState> targets = new EnumMap<>(Direction.class);
+    Map<Direction, PlayerState> shooters = new EnumMap<>(Direction.class);
+    Set<Direction> space = EnumSet.noneOf(Direction.class);
+  
     Worker(ArenaUpdate arenaUpdate) {
       this.arenaUpdate = arenaUpdate;
       self = arenaUpdate.arena.state.get(arenaUpdate._links.self.href);
@@ -139,9 +138,6 @@ public class Application {
     }
 
     private void analyse() {
-      targets.clear();
-      shooters.clear();
-      space.clear();
       analyseOponents();
       analyseSpace();
       System.out.println("targets:" + targets);

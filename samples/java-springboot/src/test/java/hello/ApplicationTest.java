@@ -35,6 +35,15 @@ public class ApplicationTest extends TestCase {
         assertTrue(Arrays.asList("L", "R").contains(application.index(arenaUpdate)));
     }
 
+    public void testTopBoundaryManyBelow() {
+        System.out.println("*** testTopBoundary()");
+        addPlayer("self_id", playerState(6, 0, Direction.N, false));
+        addPlayer("p1", playerState(6, 3, Direction.N));
+        addPlayer("p2", playerState(6, 4, Direction.E));
+        addPlayer("p3", playerState(6, 5, Direction.W));
+        assertTrue(Arrays.asList("L", "R").contains(application.index(arenaUpdate)));
+    }
+
     private PlayerState playerState(int x, int y, Direction direction, boolean... wasHit) {
         PlayerState playerState = new PlayerState();
         playerState.x = x;
