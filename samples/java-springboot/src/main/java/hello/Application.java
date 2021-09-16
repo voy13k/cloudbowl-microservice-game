@@ -2,6 +2,7 @@ package hello;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.core.style.ToStringCreator;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,34 +18,23 @@ import java.util.function.Function;
 @RestController
 public class Application {
   enum Direction {
-    N("W", "E", "S", 0, -1),
-    S("E", "W", "N", 0, 1),
-    E("N", "S", "W", 1, 0),
-    W("S", "N", "E", -1, 0);
-
-    static {
-      for (Direction direction: values()) {
-        direction.left = valueOf(direction.leftStr);
-        direction.right = valueOf(direction.rightStr);
-        direction.left = valueOf(direction.oppositeStr);
-      }
-    }
+    N("W", "E", "S"),
+    S("E", "W", "N"),
+    E("N", "S", "W"),
+    W("S", "N", "E");
 
     public Direction left;
     public Direction right;
     public Direction opposite;
-    public final int yStep;
-    public final int xStep;
+
     private String leftStr;
     private String rightStr;
     private String oppositeStr;
 
-    Direction(String left, String right, String opposite, int xStep, int yStep) {
+    Direction(String left, String right, String opposite) {
       this.leftStr = left;
       this.rightStr = right;
       this.oppositeStr = opposite;
-      this.xStep = xStep;
-      this.yStep = yStep;
     }
 
     Direction getNewDirection(Action action) {
@@ -94,6 +84,10 @@ public class Application {
     public Direction direction;
     public Boolean wasHit;
     public Integer score;
+    @Override
+    public String toString() {
+        return "[" + x + "," + y + "]";
+    }
   }
 
   static class Arena {
@@ -104,6 +98,14 @@ public class Application {
   static class ArenaUpdate {
     public Links _links;
     public Arena arena;
+  }
+
+  static {
+    for (Direction direction: Direction.values()) {
+      direction.left = Direction.valueOf(direction.leftStr);
+      direction.right = Direction.valueOf(direction.rightStr);
+      direction.opposite = Direction.valueOf(direction.oppositeStr);
+    }
   }
 
   public static void main(String[] args) {
@@ -145,6 +147,9 @@ public class Application {
       space.clear();
       analyseOponents();
       analyseSpace();
+      System.out.println("targets:" + targets);
+      System.out.println("shooters:" + shooters);
+      System.out.println("space:" + space);
     }
 
     private void analyseOponents() {
@@ -185,17 +190,16 @@ public class Application {
 
     private void analyseSpace() {
       // assumes oponents analysed
-      if (self.y > 0 && self.y - targets.get(Direction.S).y > 1) {
-        space.add(Direction.N);
-      }
-      if (self.y + 1 < arenaUpdate.arena.dims.get(1) && targets.get(Direction.N).y - self.y > 1) {
-        space.add(Direction.S);
-      }
-      if (self.x > 0 && targets.get(Direction.E).x - self.x > 1) {
-        space.add(Direction.W);
-      }
-      if (self.x + 1 < arenaUpdate.arena.dims.get(0) && self.x - targets.get(Direction.W).x > 1) {
-        space.add(Direction.E);
+      checkSpace(Direction.N, self.y == 0, (t) -> self.y - t.y);
+      checkSpace(Direction.S, self.y + 1 >= arenaUpdate.arena.dims.get(1), (t) -> t.y - self.y);
+      checkSpace(Direction.W, self.x == 0, (t) -> t.x - self.x);
+      checkSpace(Direction.E, self.x + 1 >= arenaUpdate.arena.dims.get(0), (t) -> self.x - t.x);
+    }
+
+    private void checkSpace(Direction direction, boolean onBoundary, Function<PlayerState, Integer> targetDistanceCalc) {
+      PlayerState target = targets.get(direction);
+      if (!onBoundary && (target == null || targetDistanceCalc.apply(target) > 1)) {
+        space.add(direction.opposite);
       }
     }
   
@@ -220,7 +224,8 @@ public class Application {
       if (targets.get(self.direction) != null) {
         return Action.T;
       }
-      Action action = handleNeighbour(Action.L);
+      Action action = random(Action.L, Action.R);
+      action = handleNeighbour(Action.L);
       if (action != null) {
         return action;
       }
@@ -228,10 +233,18 @@ public class Application {
       if (action != null) {
         return action;
       }
-      if (isPossible(Action.R)) {
-        return Action.R;
+      if (isPossible(Action.F)) {
+        return Action.F;
       }
-      return Action.L;
+      action = random(Action.L, Action.R);
+      if (isPossible(action)) {
+        return action;
+      }
+      action = action.getOpposite();
+      if (isPossible(action)) {
+        return action;
+      }
+      return Action.T;
     }
 
     private Action handleNeighbour(Action turn) {
