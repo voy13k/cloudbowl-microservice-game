@@ -34,7 +34,7 @@ public class CellDataTest extends ApplicationTestBase {
 
   @Before
   public void setUp() {
-    super.setUp("***", false, X, Y, E);
+    super.setUp(false, X, Y, E);
   }
 
   @Test

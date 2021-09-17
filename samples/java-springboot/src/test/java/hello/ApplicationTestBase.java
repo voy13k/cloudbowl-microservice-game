@@ -31,8 +31,7 @@ public abstract class ApplicationTestBase {
     arenaUpdate.arena.state = new HashMap<>();
   }
 
-  protected void setUp(String caseName, boolean selfWasHit, Object... data) {
-    logger.info("*** " + caseName + " ***");
+  protected void setUp(boolean selfWasHit, Object... data) {
     for (int i = 0; i < data.length; i += 3) {
       int x = (int) data[i];
       int y = (int) data[i + 1];

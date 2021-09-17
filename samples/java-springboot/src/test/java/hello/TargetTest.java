@@ -19,7 +19,7 @@ public class TargetTest extends ApplicationTestBase {
   @Test
   public void testEastToNorthTarget() {
     setUp(
-        "EastToNorth", false,
+        false,
         6, 5, E,
         6, 2, E);
     verify(L);
@@ -28,7 +28,7 @@ public class TargetTest extends ApplicationTestBase {
   @Test
   public void testEastToNorthOutOfRange() {
     setUp(
-        "EastToNorthOutOfRange", false,
+        false,
         6, 5, E,
         6, 1, E);
     verify(F);
@@ -37,7 +37,7 @@ public class TargetTest extends ApplicationTestBase {
   @Test
   public void testEastToNorthShooter() {
     setUp(
-        "EastToNorthShooter", false,
+        false,
         6, 5, E,
         6, 2, S);
     verify(F);
@@ -46,7 +46,7 @@ public class TargetTest extends ApplicationTestBase {
   @Test
   public void testWestToNorthTarget() {
     setUp(
-        "WestToNorth", false,
+        false,
         6, 5, W,
         6, 2, E);
     verify(R);
@@ -55,7 +55,7 @@ public class TargetTest extends ApplicationTestBase {
   @Test
   public void testWestToNorthOutOfRange() {
     setUp(
-        "WestToNorthOutOfRange", false,
+        false,
         6, 5, W,
         6, 1, E);
     verify(F);
@@ -64,7 +64,7 @@ public class TargetTest extends ApplicationTestBase {
   @Test
   public void testWestToNorthShooter() {
     setUp(
-        "WestToNorthShooter", false,
+        false,
         6, 5, W,
         6, 2, S);
     verify(F);
@@ -73,7 +73,7 @@ public class TargetTest extends ApplicationTestBase {
   @Test
   public void testNorthToEastTarget() {
     setUp(
-        "NorthToEast", false,
+        false,
         3, 5, N,
         6, 5, E);
     verify(R);
@@ -82,7 +82,7 @@ public class TargetTest extends ApplicationTestBase {
   @Test
   public void testNorthToEastOutOfRange() {
     setUp(
-        "NorthToEastOutOfRange", false,
+        false,
         3, 5, N,
         7, 5, E);
     verify(F);
@@ -91,7 +91,7 @@ public class TargetTest extends ApplicationTestBase {
   @Test
   public void testNorthToEastShooter() {
     setUp(
-        "NorthToEastShooter", false,
+        false,
         3, 5, N,
         6, 5, W);
     verify(F);
