@@ -2,10 +2,10 @@ package hello;
 
 enum Direction {
 
-  N("W", "E", "S", (from, to) -> from.getY() - to.getY()),
-  S("E", "W", "N", (from, to) -> to.getY() - from.getY()),
-  E("N", "S", "W", (from, to) -> to.getX() - from.getX()),
-  W("S", "N", "E", (from, to) -> from.getX() - to.getX());
+  N("W", "E", "S", (from, to) -> from.y - to.y),
+  S("E", "W", "N", (from, to) -> to.y - from.y),
+  E("N", "S", "W", (from, to) -> to.x - from.x),
+  W("S", "N", "E", (from, to) -> from.x - to.x);
 
   public Direction left;
   public Direction right;

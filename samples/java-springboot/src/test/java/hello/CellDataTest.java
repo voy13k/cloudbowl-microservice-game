@@ -8,7 +8,6 @@ import static hello.Direction.E;
 import static hello.Direction.N;
 import static hello.Direction.S;
 import static hello.Direction.W;
-import static hello.TestUtils.cell;
 import static org.junit.Assert.*;
 
 import java.util.Arrays;
@@ -219,7 +218,7 @@ public class CellDataTest extends ApplicationTestBase {
   }
 
   private CellData createCellData(int x, int y) {
-    return new CellData(arenaUpdate, cell(x, y));
+    return new CellData(arenaUpdate, Cell.at(x, y));
   }
 
 }

@@ -24,27 +24,10 @@ public class Application {
     public Self self;
   }
 
-  static class PlayerState implements Cell {
-    public int x;
-    public int y;
+  static class PlayerState extends Cell {
     public Direction direction;
     public boolean wasHit;
     public int score;
-
-    @Override
-    public String toString() {
-      return "[" + x + "," + y + "]";
-    }
-
-    @Override
-    public int getX() {
-      return x;
-    }
-
-    @Override
-    public int getY() {
-      return y;
-    }
   }
 
   static class Arena {
