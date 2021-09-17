@@ -73,7 +73,7 @@ public class Application {
 
   @PostMapping("/**")
   public String index(@RequestBody ArenaUpdate arenaUpdate) {
-    Action action = new Responder(arenaUpdate).work();
+    Action action = new Responder(arenaUpdate).respond();
     return action.name();
   }
 
@@ -88,7 +88,7 @@ public class Application {
       this.locationData = new CellData(arenaUpdate, self);
     }
 
-    Action work() {
+    Action respond() {
       if (self.wasHit || locationData.shooters.size() > 1) {
         if (locationData.space.contains(self.direction)
             && locationData.shooters.get(self.direction) == null) {
@@ -103,11 +103,11 @@ public class Application {
       if (locationData.targets.get(self.direction) != null) {
         return Action.T;
       }
-      Action action = findTarget(Action.L);
+      Action action = evaluateTarget(Action.L);
       if (action != null) {
         return action;
       }
-      action = findTarget(Action.R);
+      action = evaluateTarget(Action.R);
       if (action != null) {
         return action;
       }
@@ -124,7 +124,7 @@ public class Application {
       return Action.T;
     }
 
-    private Action findTarget(Action turn) {
+    private Action evaluateTarget(Action turn) {
       Direction newDirection = self.direction.getDirectionAfter(turn);
       if (locationData.targets.get(newDirection) == null) {
         // no target on this side
