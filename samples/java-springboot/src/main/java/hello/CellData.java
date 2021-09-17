@@ -112,12 +112,6 @@ class CellData {
         .append("space", space).toString();
   }
 
-  boolean isSafe(Direction currentDirection, Action action) {
-    Direction newDirection = currentDirection.getDirectionAfter(action);
-    return shooters.get(newDirection) == null &&
-        shooters.get(newDirection.opposite) == null;
-  }
-
   boolean isPossible(Direction currentDirection, Action action) {
     Direction newDirection = currentDirection.getDirectionAfter(action);
     return space.contains(newDirection);
