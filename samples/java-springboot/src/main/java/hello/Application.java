@@ -1,13 +1,5 @@
 package hello;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.core.style.ToStringCreator;
-import org.springframework.web.bind.WebDataBinder;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
@@ -15,6 +7,18 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.Function;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.core.style.ToStringCreator;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.InitBinder;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
 @SpringBootApplication
 @RestController
@@ -195,7 +199,8 @@ public class Application {
 
     Action work() {
       if (self.wasHit || locationData.shooters.size() > 1) {
-        if (locationData.space.contains(self.direction)) {
+        if (locationData.space.contains(self.direction)
+            && locationData.shooters.get(self.direction) == null) {
           return Action.F;
         }
         Action action = Action.L;
@@ -242,10 +247,6 @@ public class Application {
       } // not a shooter
       // shootout
       return turn;
-    }
-
-    private Action random(Action... actions) {
-      return actions[new Random().nextInt(actions.length)];
     }
 
   }
