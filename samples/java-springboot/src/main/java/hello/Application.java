@@ -194,15 +194,12 @@ public class Application {
     }
 
     Action work() {
-      if (locationData.shooters.size() > 1) {
-        if (locationData.space.contains(self.direction)) {
-          if (locationData.shooters.get(self.direction) == null) {
-            return Action.F;
-          } else {
-            return Action.L;
-          }
+      if (self.wasHit || locationData.shooters.size() > 1) {
+        if (locationData.space.contains(self.direction)
+            && locationData.shooters.get(self.direction) == null) {
+          return Action.F;
         }
-        Action action = random(Action.L, Action.R);
+        Action action = Action.L;
         if (locationData.isPossible(self.direction, action)) {
           return action;
         }
