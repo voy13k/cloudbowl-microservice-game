@@ -152,7 +152,7 @@ public class Application {
         Function<PlayerState, Integer> targetDistanceCalc) {
       PlayerState target = targets.get(directionToSpace);
       Integer distance = target == null ? null : targetDistanceCalc.apply(target);
-//      LOGGER.debug("checkSpace: {}, {}, {}, {}", directionToSpace, onBoundary, target, distance);
+      // LOGGER.debug("checkSpace: {}, {}, {}, {}", directionToSpace, onBoundary, target, distance);
       if (!onBoundary && (target == null || distance > 1)) {
         space.add(directionToSpace);
       }
@@ -196,7 +196,11 @@ public class Application {
     Action work() {
       if (self.wasHit) {
         if (locationData.space.contains(self.direction)) {
-          return Action.F;
+          if (locationData.shooters.get(self.direction) == null) {
+            return Action.F;
+          } else {
+            return Action.L;
+          }
         }
         Action action = random(Action.L, Action.R);
         if (locationData.isPossible(self.direction, action)) {
@@ -210,8 +214,7 @@ public class Application {
       if (locationData.targets.get(self.direction) != null) {
         return Action.T;
       }
-      Action action = random(Action.L, Action.R);
-      action = findTarget(Action.L);
+      Action action = findTarget(Action.L);
       if (action != null) {
         return action;
       }
@@ -222,7 +225,7 @@ public class Application {
       if (locationData.space.contains(self.direction)) {
         return Action.F;
       }
-      action = random(Action.L, Action.R);
+      action = Action.R;
       if (locationData.isPossible(self.direction, action)) {
         return action;
       }
