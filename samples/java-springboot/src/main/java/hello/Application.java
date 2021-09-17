@@ -202,10 +202,7 @@ public class Application {
         if (locationData.isPossible(self.direction, action)) {
           return action;
         }
-        action = action.opposite;
-        if (locationData.isPossible(self.direction, action)) {
-          return action;
-        }
+        return action.opposite;
       }
       if (locationData.targets.get(self.direction) != null) {
         return Action.T;
