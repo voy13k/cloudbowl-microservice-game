@@ -4,12 +4,9 @@ import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.function.Function;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.core.style.ToStringCreator;
@@ -23,8 +20,6 @@ import org.springframework.web.bind.annotation.RestController;
 @SpringBootApplication
 @RestController
 public class Application {
-
-  static private final Logger LOGGER = LoggerFactory.getLogger(Application.class);
 
   static class Self {
     public String href;
@@ -74,7 +69,6 @@ public class Application {
   @PostMapping("/**")
   public String index(@RequestBody ArenaUpdate arenaUpdate) {
     Action action = new Worker(arenaUpdate).work();
-    LOGGER.debug("action: {}", action);
     return action.name();
   }
 
@@ -145,20 +139,27 @@ public class Application {
     }
 
     private void analyseSpace() {
-      // assumes oponents analysed
-      checkSpace(Direction.N, y == 0, (t) -> y - t.y);
-      checkSpace(Direction.S, y + 1 >= arenaUpdate.arena.dims.get(1), (t) -> t.y - y);
-      checkSpace(Direction.W, x == 0, (t) -> t.x - x);
-      checkSpace(Direction.E, x + 1 >= arenaUpdate.arena.dims.get(0), (t) -> x - t.x);
+      // assumes opponents analysed
+      if (y != 0) {
+        checkSpace(Direction.N, (t) -> y - t.y);
+      }
+      if (y < arenaUpdate.arena.dims.get(1) - 1) {
+        checkSpace(Direction.S, (t) -> t.y - y);
+      }
+      if (x != 0) {
+        checkSpace(Direction.W, (t) -> t.x - x);
+      }
+      if (x < arenaUpdate.arena.dims.get(0) - 1) {
+        checkSpace(Direction.E, (t) -> x - t.x);
+      }
     }
 
-    private void checkSpace(Direction directionToSpace, boolean onBoundary,
+    private void checkSpace(Direction direction,
         Function<PlayerState, Integer> targetDistanceCalc) {
-      PlayerState target = targets.get(directionToSpace);
+      PlayerState target = targets.get(direction);
       Integer distance = target == null ? null : targetDistanceCalc.apply(target);
-      // LOGGER.debug("checkSpace: {}, {}, {}, {}", directionToSpace, onBoundary, target, distance);
-      if (!onBoundary && (target == null || distance > 1)) {
-        space.add(directionToSpace);
+      if (target == null || distance > 1) {
+        space.add(direction);
       }
     }
 
@@ -194,7 +195,6 @@ public class Application {
       this.arenaUpdate = arenaUpdate;
       this.self = arenaUpdate.arena.state.get(arenaUpdate._links.self.href);
       this.locationData = new LocationData(arenaUpdate, self.x, self.y);
-      LOGGER.debug("{}", locationData);
     }
 
     Action work() {

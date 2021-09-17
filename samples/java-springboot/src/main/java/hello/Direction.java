@@ -1,6 +1,7 @@
 package hello;
 
 enum Direction {
+
   N("W", "E", "S"),
   S("E", "W", "N"),
   E("N", "S", "W"),
@@ -38,4 +39,5 @@ enum Direction {
       return this;
     }
   }
+
 }
