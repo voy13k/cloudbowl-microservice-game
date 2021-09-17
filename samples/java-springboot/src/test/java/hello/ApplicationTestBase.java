@@ -1,5 +1,7 @@
 package hello;
 
+import static org.junit.Assert.*;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -12,13 +14,13 @@ import hello.Application.ArenaUpdate;
 import hello.Application.Links;
 import hello.Application.PlayerState;
 import hello.Application.Self;
-import junit.framework.TestCase;
 
-public abstract class ApplicationTestBase extends TestCase {
+public abstract class ApplicationTestBase {
 
   Logger logger = LoggerFactory.getLogger(getClass());
   Application application = new Application();
   ArenaUpdate arenaUpdate = new ArenaUpdate();
+  int playerCounter;
 
   protected ApplicationTestBase(int arenaWidth, int arenaHeight) {
     arenaUpdate._links = new Links();
@@ -34,14 +36,18 @@ public abstract class ApplicationTestBase extends TestCase {
     for (int i = 0; i < data.length; i += 3) {
       int x = (int) data[i];
       int y = (int) data[i + 1];
-      Direction direction = Direction.valueOf((String) data[i + 2]);
-      arenaUpdate.arena.state.put("p" + i, playerState(x, y, direction, selfWasHit));
+      Direction direction = (Direction) data[i + 2];
+      addPlayer(x, y, direction, selfWasHit);
     }
   }
 
-  protected void verify(String... expectedAlternatives) {
-    List<String> expected = Arrays.asList(expectedAlternatives);
-    String actualMove = application.index(arenaUpdate);
+  protected void addPlayer(int x, int y, Direction direction, boolean ...selfWasHit) {
+    arenaUpdate.arena.state.put("p" + playerCounter++, playerState(x, y, direction, selfWasHit));
+  }
+
+  protected void verify(Action... expectedAlternatives) {
+    List<Action> expected = Arrays.asList(expectedAlternatives);
+    Action actualMove = Action.valueOf(application.index(arenaUpdate));
     assertTrue(
         "expected on of: " + expected + ", was: " + actualMove, expected.contains(actualMove));
   }

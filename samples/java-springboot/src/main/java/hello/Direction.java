@@ -2,14 +2,15 @@ package hello;
 
 enum Direction {
 
-  N("W", "E", "S"),
-  S("E", "W", "N"),
-  E("N", "S", "W"),
-  W("S", "N", "E");
+  N("W", "E", "S", (from, to) -> from.getY() - to.getY()),
+  S("E", "W", "N", (from, to) -> to.getY() - from.getY()),
+  E("N", "S", "W", (from, to) -> to.getX() - from.getX()),
+  W("S", "N", "E", (from, to) -> from.getX() - to.getX());
 
   public Direction left;
   public Direction right;
   public Direction opposite;
+  public CellDistanceCalc distance;
 
   private String leftStr;
   private String rightStr;
@@ -23,13 +24,14 @@ enum Direction {
     }
   }
 
-  Direction(String left, String right, String opposite) {
+  private Direction(String left, String right, String opposite, CellDistanceCalc distanceCalc) {
     this.leftStr = left;
     this.rightStr = right;
     this.oppositeStr = opposite;
+    this.distance = distanceCalc;
   }
 
-  Direction getNewDirection(Action action) {
+  public Direction getDirectionAfter(Action action) {
     switch (action) {
     case L:
       return left;
@@ -38,6 +40,10 @@ enum Direction {
     default:
       return this;
     }
+  }
+
+  public interface CellDistanceCalc {
+    int fromTo(Cell p1, Cell p2);
   }
 
 }
