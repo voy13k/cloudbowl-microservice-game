@@ -194,7 +194,7 @@ public class Application {
     }
 
     Action work() {
-      if (self.wasHit) {
+      if (locationData.shooters.size() > 1) {
         if (locationData.space.contains(self.direction)) {
           if (locationData.shooters.get(self.direction) == null) {
             return Action.F;
